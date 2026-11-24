@@ -1,0 +1,15 @@
+{
+  "support_type": "simply_supported",
+  "span": 20.0,
+  "material": "Steel",
+  "section": "W12x26",
+  "deflection_limit": "L/360",
+  "loads": [
+    {
+      "type": "uniform",
+      "magnitude": 1.0,
+      "start": 0.0,
+      "end": 20.0
+    }
+  ]
+}
