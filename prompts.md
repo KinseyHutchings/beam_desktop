@@ -15,3 +15,6 @@
 - Asked: Add a File menu with Save and Open for beam designs, after removing "Saving designs" from the spec's Out of scope section.
 - Changed: Added the Save/Open requirement to `spec.md`; implemented a JSON design file format and File menu in `app.py` that preserves and restores support type, span, material/section, deflection limit, and loads.
 - Worked: Yes. Python compilation and a headless save/open round-trip smoke test passed.
+- Asked: Diagnose the macOS `NSInvalidArgumentException` crash in Tk's cursor handler.
+- Changed: Added a macOS-safe Matplotlib Tk canvas subclass that disables backend cursor switching, avoiding unsupported cursor names being passed into Cocoa/Tk.
+- Worked: The fix compiles and imports on the Python 3.13 macOS environment; the reported crash path is isolated to the native Tk cursor handler.

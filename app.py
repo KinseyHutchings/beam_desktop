@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import math
+import sys
 import tkinter as tk
 from tkinter import filedialog, messagebox, ttk
 
@@ -17,6 +18,15 @@ from calculations import MATERIALS, Load, analyze
 ACCENT = "#2867e8"
 TEAL = "#0e9f9a"
 PURPLE = "#8b5bd6"
+
+
+class SafeFigureCanvasTkAgg(FigureCanvasTkAgg):
+    """Avoid a Tk/Aqua abort when Matplotlib requests an unsupported cursor."""
+
+    def set_cursor(self, cursor):
+        if sys.platform == "darwin":
+            return
+        super().set_cursor(cursor)
 
 
 class ToolTip:
@@ -260,7 +270,7 @@ class BeamDesigner:
         self.moment_ax = self.figure.add_subplot(grid[2], sharex=self.beam_ax)
         self.deflection_ax = self.figure.add_subplot(grid[3], sharex=self.beam_ax)
         self.axes = (self.beam_ax, self.shear_ax, self.moment_ax, self.deflection_ax)
-        self.canvas = FigureCanvasTkAgg(self.figure, master=self.plot_card)
+        self.canvas = SafeFigureCanvasTkAgg(self.figure, master=self.plot_card)
         self.canvas.get_tk_widget().grid(row=0, column=0, sticky="nsew")
         self.canvas.mpl_connect("motion_notify_event", self._on_plot_motion)
         self.canvas.mpl_connect("button_press_event", self._on_plot_press)
