@@ -39,3 +39,6 @@
 - Asked: What's the global username and email set for git?
 - Changed: Checked Git's global `user.name` and `user.email`; no application files changed.
 - Worked: Yes. The configured identity is Madison Hutchings (maddiehutch20@gmail.com).
+- Asked: Change the global username and email to McKinsey Hutchings (tobin32@byu.edu).
+- Changed: Set Git's global `user.name` to `McKinsey Hutchings` and `user.email` to `tobin32@byu.edu`.
+- Worked: Yes. Verified both global values after updating them.
