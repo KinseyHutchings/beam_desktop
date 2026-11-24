@@ -24,6 +24,9 @@
 - Asked: Add an Export results button that saves x, V, M, and deflection along the beam to a CSV file for Excel.
 - Changed: Added an Export CSV button and UTF-8 CSV writer with unit-labeled Position, Shear, Moment, and Deflection columns; documented the output in `spec.md`.
 - Worked: Python compilation and a headless CSV export smoke test passed.
+- Asked: Make the supplied `beam_calculation_sheet.pdf` more presentable for sharing with a manager.
+- Changed: Redesigned the PDF export as a landscape review sheet with summary cards, a structured inputs/loads panel, clearer diagrams, and compact design-check results; regenerated `beam_calculation_sheet.pdf`.
+- Worked: Yes. The refreshed PDF is a valid 54 KB PDF and was visually inspected after generation.
 - Asked: Add a Calculation sheet button that saves the diagrams and checks as a PDF, with inputs listed at the top for hand-in.
 - Changed: Added an Export PDF button and one-page report generator with design inputs, loads, reactions, beam/load drawing, shear/moment/deflection diagrams, checks, and recommendation; documented it in `spec.md`.
 - Worked: Python compilation and a generated PDF smoke test passed.

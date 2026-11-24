@@ -12,6 +12,7 @@ from tkinter import filedialog, messagebox, ttk
 from matplotlib.backends.backend_pdf import PdfPages
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from matplotlib.figure import Figure
+from matplotlib.patches import Rectangle
 import numpy as np
 
 from calculations import MATERIALS, Load, analyze
@@ -674,45 +675,49 @@ class BeamDesigner:
             return
 
         try:
-            report = Figure(figsize=(8.5, 11), dpi=150, facecolor="white")
-            report.text(
-                0.08,
-                0.965,
-                "Beam Designer — Calculation Sheet",
-                fontsize=16,
-                fontweight="bold",
-                color="#25344c",
-                va="top",
-            )
-            report.text(
-                0.08,
-                0.938,
-                "Structural analysis report",
-                fontsize=9,
-                color="#738198",
-                va="top",
-            )
+            report = Figure(figsize=(11, 8.5), dpi=150, facecolor="white")
+            report.text(0.07, 0.955, "Beam Design Calculation Sheet", fontsize=19,
+                        fontweight="bold", color="#25344c", va="top")
+            report.text(0.07, 0.922, "Structural analysis report  ·  Beam Designer",
+                        fontsize=9, color="#738198", va="top")
+            report.text(0.93, 0.955, "DESIGN REVIEW", fontsize=8, fontweight="bold",
+                        color=ACCENT, ha="right", va="top")
             support_label = "Simply supported" if self.support == "simply_supported" else "Cantilever"
-            report.text(
-                0.08,
-                0.900,
-                f"Inputs    Support: {support_label}    Span: {self.span:g} ft    "
-                f"Material: {self.material}    Section: {self.section}    "
-                f"Deflection limit: L/{self.deflection_divisor}",
-                fontsize=8.5,
-                color="#25344c",
-                va="top",
-            )
-            load_text = "Loads: " + ("None" if not self.loads else "; ".join(self._format_load(load) for load in self.loads))
-            report.text(
-                0.08,
-                0.866,
-                load_text,
-                fontsize=8,
-                color="#4f6078",
-                va="top",
-                wrap=True,
-            )
+            bending_pass = self.analysis.bending_ratio <= 1.0
+            deflection_pass = self.analysis.deflection_ratio <= 1.0
+            overall_pass = bending_pass and deflection_pass
+            max_moment = self.analysis.moment[self.analysis.max_moment]
+            max_deflection = self.analysis.deflection[self.analysis.max_deflection]
+            summary_cards = [
+                ("STATUS", "PASS" if overall_pass else "REVIEW", "#287747" if overall_pass else "#a62c34"),
+                ("SELECTED SECTION", self.section, "#25344c"),
+                ("SPAN", f"{self.span:g} ft", "#25344c"),
+                ("MAX MOMENT", f"{max_moment:.1f} kip-ft", TEAL),
+            ]
+            for index, (label, value, color) in enumerate(summary_cards):
+                x = 0.07 + index * 0.215
+                report.patches.append(Rectangle(
+                    (x, 0.815), 0.195, 0.075, transform=report.transFigure,
+                    facecolor="#f3f6fb", edgecolor="#dce4ef", linewidth=0.7,
+                ))
+                report.text(x + 0.012, 0.875, label, fontsize=6.5, fontweight="bold",
+                            color="#738198", va="top")
+                report.text(x + 0.012, 0.842, value, fontsize=12, fontweight="bold",
+                            color=color, va="top")
+
+            report.patches.append(Rectangle(
+                (0.07, 0.665), 0.86, 0.125, transform=report.transFigure,
+                facecolor="#f7f9fc", edgecolor="#dce4ef", linewidth=0.7,
+            ))
+            report.text(0.085, 0.772, "DESIGN INPUTS", fontsize=7, fontweight="bold",
+                        color=ACCENT, va="top")
+            report.text(0.085, 0.742,
+                        f"Support  {support_label}    ·    Span  {self.span:g} ft    ·    "
+                        f"Material  {self.material}    ·    Section  {self.section}    ·    "
+                        f"Deflection limit  L/{self.deflection_divisor}",
+                        fontsize=8.2, color="#25344c", va="top")
+            load_text = "Applied loads  " + ("None" if not self.loads else "   |   ".join(self._format_load(load) for load in self.loads))
+            report.text(0.085, 0.706, load_text, fontsize=8, color="#4f6078", va="top", wrap=True)
             reaction_text = (
                 f"Reactions: Rₗ {self.analysis.reaction_left:.2f} k, "
                 f"Rᵣ {self.analysis.reaction_right:.2f} k"
@@ -720,12 +725,12 @@ class BeamDesigner:
                 else f"Reaction: {self.analysis.reaction_left:.2f} k    "
                 f"Fixed-end moment: {self.analysis.fixed_end_moment:.2f} kip-ft"
             )
-            report.text(0.08, 0.837, reaction_text, fontsize=8, color="#4f6078", va="top")
+            report.text(0.085, 0.678, reaction_text, fontsize=8, color="#4f6078", va="top")
 
-            beam_axis = report.add_axes([0.12, 0.700, 0.80, 0.105])
+            beam_axis = report.add_axes([0.10, 0.510, 0.82, 0.115])
             self._draw_report_beam(beam_axis)
             self._draw_report_diagram(
-                report.add_axes([0.12, 0.515, 0.80, 0.135]),
+                report.add_axes([0.10, 0.310, 0.40, 0.145]),
                 self.analysis.shear,
                 "Shear",
                 "kips",
@@ -733,7 +738,7 @@ class BeamDesigner:
                 self.analysis.max_shear,
             )
             self._draw_report_diagram(
-                report.add_axes([0.12, 0.335, 0.80, 0.135]),
+                report.add_axes([0.55, 0.310, 0.40, 0.145]),
                 self.analysis.moment,
                 "Moment",
                 "kip-ft",
@@ -741,7 +746,7 @@ class BeamDesigner:
                 self.analysis.max_moment,
             )
             self._draw_report_diagram(
-                report.add_axes([0.12, 0.155, 0.80, 0.135]),
+                report.add_axes([0.10, 0.125, 0.85, 0.135]),
                 self.analysis.deflection,
                 "Deflection",
                 "in",
@@ -751,38 +756,32 @@ class BeamDesigner:
                 x_label=True,
             )
 
-            report.text(0.12, 0.112, "Design checks", fontsize=10, fontweight="bold", color="#25344c")
-            bending_pass = self.analysis.bending_ratio <= 1.0
-            deflection_pass = self.analysis.deflection_ratio <= 1.0
-            report.text(
-                0.12,
-                0.082,
-                f"Bending: {self.analysis.bending_stress:.2f} ksi / "
-                f"{self.analysis.allowable_bending:.2f} ksi allowable    "
-                f"{'PASS' if bending_pass else 'FAIL'}",
-                fontsize=8.5,
-                color="#287747" if bending_pass else "#a62c34",
-                fontweight="bold",
-            )
-            report.text(
-                0.12,
-                0.058,
-                f"Deflection: {abs(self.analysis.deflection[self.analysis.max_deflection]):.3f} in / "
-                f"{self.analysis.deflection_limit:.3f} in allowable    "
-                f"{'PASS' if deflection_pass else 'FAIL'}",
-                fontsize=8.5,
-                color="#287747" if deflection_pass else "#a62c34",
-                fontweight="bold",
-            )
+            report.patches.append(Rectangle(
+                (0.07, 0.028), 0.86, 0.07, transform=report.transFigure,
+                facecolor="#f7f9fc", edgecolor="#dce4ef", linewidth=0.7,
+            ))
+            report.text(0.085, 0.086, "DESIGN CHECKS", fontsize=7, fontweight="bold",
+                        color=ACCENT, va="top")
+            report.text(0.085, 0.052,
+                        f"Bending  {self.analysis.bending_stress:.2f} / {self.analysis.allowable_bending:.2f} ksi  "
+                        f"({self.analysis.bending_ratio * 100:.0f}%)",
+                        fontsize=8, color="#25344c", va="center")
+            report.text(0.41, 0.052, "PASS" if bending_pass else "FAIL", fontsize=8,
+                        color="#287747" if bending_pass else "#a62c34", fontweight="bold", va="center")
+            report.text(0.54, 0.052,
+                        f"Deflection  {abs(max_deflection):.3f} / {self.analysis.deflection_limit:.3f} in  "
+                        f"({self.analysis.deflection_ratio * 100:.0f}%)",
+                        fontsize=8, color="#25344c", va="center")
+            report.text(0.88, 0.052, "PASS" if deflection_pass else "FAIL", fontsize=8,
+                        color="#287747" if deflection_pass else "#a62c34", fontweight="bold", va="center", ha="right")
             if self.analysis.recommendation:
                 report.text(
-                    0.58,
-                    0.082,
+                    0.69,
+                    0.086,
                     f"Lightest passing section: {self.analysis.recommendation}",
-                    fontsize=8,
+                    fontsize=7,
                     color="#4f6078",
                 )
-            report.text(0.08, 0.025, "Generated by Beam Designer", fontsize=7, color="#9aa7b8")
 
             with PdfPages(path) as pdf:
                 pdf.infodict()["Title"] = "Beam Designer Calculation Sheet"
