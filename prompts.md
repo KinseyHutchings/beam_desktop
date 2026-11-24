@@ -18,3 +18,6 @@
 - Asked: Diagnose the macOS `NSInvalidArgumentException` crash in Tk's cursor handler.
 - Changed: Added a macOS-safe Matplotlib Tk canvas subclass that disables backend cursor switching, avoiding unsupported cursor names being passed into Cocoa/Tk.
 - Worked: The fix compiles and imports on the Python 3.13 macOS environment; the reported crash path is isolated to the native Tk cursor handler.
+- Asked: Verify why the app would not allow saving a file and fix it if needed.
+- Changed: Replaced the macOS dialog's multi-dot `*.beam.json` filter with portable `*.json` handling, added a default filename, and attached Save/Open dialogs to the main window.
+- Worked: Python compilation and a first-save dialog/file-write smoke test passed; the native dialog no longer receives the problematic multi-dot file type.

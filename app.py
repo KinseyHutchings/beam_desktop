@@ -517,10 +517,12 @@ class BeamDesigner:
         path = self.current_file
         if not path:
             path = filedialog.asksaveasfilename(
+                parent=self.root,
                 title="Save beam design",
-                defaultextension=".beam.json",
+                initialfile="beam_design.json",
+                defaultextension=".json",
                 filetypes=(
-                    ("Beam design", "*.beam.json"),
+                    ("Beam design", "*.json"),
                     ("JSON files", "*.json"),
                     ("All files", "*"),
                 ),
@@ -538,9 +540,10 @@ class BeamDesigner:
 
     def open_file(self):
         path = filedialog.askopenfilename(
+            parent=self.root,
             title="Open beam design",
             filetypes=(
-                ("Beam design", "*.beam.json"),
+                ("Beam design", "*.json"),
                 ("JSON files", "*.json"),
                 ("All files", "*"),
             ),
