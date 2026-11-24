@@ -2,9 +2,10 @@
 
 from __future__ import annotations
 
+import json
 import math
 import tkinter as tk
-from tkinter import ttk
+from tkinter import filedialog, messagebox, ttk
 
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from matplotlib.figure import Figure
@@ -99,6 +100,7 @@ class BeamDesigner:
         self.section = "W12x26"
         self.deflection_divisor = 360
         self.loads = [Load("uniform", 1.0, start=0.0, end=20.0)]
+        self.current_file: str | None = None
 
         self.style = ttk.Style()
         self._build_shell()
@@ -109,6 +111,7 @@ class BeamDesigner:
 
     def _build_shell(self):
         self.root.configure(background="#f3f6fb")
+        self._build_menu()
         self.root.columnconfigure(0, weight=0)
         self.root.columnconfigure(1, weight=1)
         self.root.rowconfigure(1, weight=1)
@@ -146,6 +149,18 @@ class BeamDesigner:
         self.right.columnconfigure(0, weight=1)
         self.right_meta = ttk.Label(self.right, style="Meta.TLabel")
         self.right_meta.grid(row=0, column=0, sticky="ew", pady=(2, 7))
+
+    def _build_menu(self):
+        menu = tk.Menu(self.root)
+        file_menu = tk.Menu(menu, tearoff=False)
+        file_menu.add_command(label="Save", accelerator="Ctrl+S", command=self.save_file)
+        file_menu.add_command(label="Open", accelerator="Ctrl+O", command=self.open_file)
+        menu.add_cascade(label="File", menu=file_menu)
+        self.root.configure(menu=menu)
+        self.root.bind("<Command-s>", lambda _event: self.save_file())
+        self.root.bind("<Command-o>", lambda _event: self.open_file())
+        self.root.bind("<Control-s>", lambda _event: self.save_file())
+        self.root.bind("<Control-o>", lambda _event: self.open_file())
 
     def _build_inputs(self):
         body = self.inputs_scroll.body
@@ -468,6 +483,120 @@ class BeamDesigner:
             self.loads.pop(index)
             self._rebuild_load_rows()
             self.render()
+
+    def _design_payload(self):
+        loads = []
+        for load in self.loads:
+            item = {"type": load.kind, "magnitude": float(load.magnitude)}
+            if load.kind == "point":
+                item["position"] = float(load.position)
+            else:
+                item["start"] = float(load.start)
+                item["end"] = float(load.end)
+            loads.append(item)
+        return {
+            "support_type": self.support,
+            "span": float(self.span),
+            "material": self.material,
+            "section": self.section,
+            "deflection_limit": f"L/{self.deflection_divisor}",
+            "loads": loads,
+        }
+
+    def save_file(self):
+        path = self.current_file
+        if not path:
+            path = filedialog.asksaveasfilename(
+                title="Save beam design",
+                defaultextension=".beam.json",
+                filetypes=(
+                    ("Beam design", "*.beam.json"),
+                    ("JSON files", "*.json"),
+                    ("All files", "*"),
+                ),
+            )
+        if not path:
+            return
+        try:
+            with open(path, "w", encoding="utf-8") as design_file:
+                json.dump(self._design_payload(), design_file, indent=2)
+                design_file.write("\n")
+        except (OSError, TypeError) as error:
+            messagebox.showerror("Save failed", f"Could not save the beam design.\n\n{error}")
+            return
+        self.current_file = path
+
+    def open_file(self):
+        path = filedialog.askopenfilename(
+            title="Open beam design",
+            filetypes=(
+                ("Beam design", "*.beam.json"),
+                ("JSON files", "*.json"),
+                ("All files", "*"),
+            ),
+        )
+        if not path:
+            return
+        try:
+            with open(path, "r", encoding="utf-8") as design_file:
+                data = json.load(design_file)
+            support = data["support_type"]
+            if support not in ("simply_supported", "cantilever"):
+                raise ValueError("The file has an unknown support type.")
+            span = float(data["span"])
+            if not math.isfinite(span) or not 4 <= span <= 40:
+                raise ValueError("The span must be between 4 and 40 ft.")
+            material = data.get("material", "Steel")
+            if material not in MATERIALS:
+                raise ValueError("The file has an unknown material.")
+            section = data["section"]
+            sections = MATERIALS[material]["sections"]
+            if section not in {item["name"] for item in sections}:
+                raise ValueError("The file has an unknown section for its material.")
+            limit = data["deflection_limit"]
+            if limit not in ("L/240", "L/360"):
+                raise ValueError("The deflection limit must be L/240 or L/360.")
+            saved_loads = data.get("loads", [])
+            if not isinstance(saved_loads, list):
+                raise ValueError("The loads value must be a list.")
+            loads = []
+            for item in saved_loads:
+                kind = item["type"]
+                magnitude = float(item["magnitude"])
+                if kind == "point":
+                    loads.append(Load("point", magnitude, position=float(item["position"])))
+                elif kind == "uniform":
+                    loads.append(
+                        Load(
+                            "uniform",
+                            magnitude,
+                            start=float(item["start"]),
+                            end=float(item["end"]),
+                        )
+                    )
+                else:
+                    raise ValueError("The file contains an unknown load type.")
+        except (OSError, ValueError, KeyError, TypeError, json.JSONDecodeError) as error:
+            messagebox.showerror("Open failed", f"Could not open the beam design.\n\n{error}")
+            return
+
+        self._updating_controls = True
+        self.span = span
+        self.support = support
+        self.material = material
+        self.section = section
+        self.deflection_divisor = int(limit.split("/")[1])
+        self.loads = loads
+        self.span_var.set(f"{span:g}")
+        self.span_scale.set(span)
+        self.support_var.set("Simply supported" if support == "simply_supported" else "Cantilever")
+        self.material_var.set(material)
+        self.limit_var.set(limit)
+        self._updating_controls = False
+        self._update_section_choices()
+        self._rebuild_load_rows()
+        self.current_file = path
+        self.render()
 
     def _draw_bar(self, canvas, ratio, color):
         canvas.delete("all")

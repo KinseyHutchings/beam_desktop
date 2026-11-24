@@ -12,3 +12,6 @@
 - Asked: Run all validation cases in `spec.md` against the app's beam calculations and report expected versus actual values.
 - Changed: Ran the four numeric examples and all listed boundary behaviors directly through `calculations.py`; no application code changed.
 - Worked: Yes. Cases 1–4 match within the spec's tolerance; case 2's deflection location is 8.80 ft versus 8.82 ft expected (0.23% difference). Boundary cases completed successfully.
+- Asked: Add a File menu with Save and Open for beam designs, after removing "Saving designs" from the spec's Out of scope section.
+- Changed: Added the Save/Open requirement to `spec.md`; implemented a JSON design file format and File menu in `app.py` that preserves and restores support type, span, material/section, deflection limit, and loads.
+- Worked: Yes. Python compilation and a headless save/open round-trip smoke test passed.
