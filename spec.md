@@ -7,7 +7,7 @@ shear, moment, and deflection diagrams and checks whether the beam is
 strong and stiff enough, updating instantly as anything changes.
 
 ## Platform
-- Native desktop window implemented in Python with Tkinter and started with `python app.py`.
+- Native desktop window implemented in Python with Tkinter and started with `python3 app.py`.
 - Keep beam calculations in a separate Python module, using NumPy; keep interface code in the app module.
 - Draw diagrams with Matplotlib embedded in the Tkinter window; plot areas use a light blue background.
 - Set a minimum window size of 980 × 680 px; keep controls scrollable or compact when the window is smaller.
