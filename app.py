@@ -9,6 +9,7 @@ import sys
 import tkinter as tk
 from tkinter import filedialog, messagebox, ttk
 
+from matplotlib.backends.backend_pdf import PdfPages
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from matplotlib.figure import Figure
 import numpy as np
@@ -167,6 +168,10 @@ class BeamDesigner:
             self.right_header, text="Export CSV", command=self.export_results
         )
         self.export_button.grid(row=0, column=1, sticky="e", padx=(10, 0))
+        self.pdf_button = ttk.Button(
+            self.right_header, text="Export PDF", command=self.export_pdf
+        )
+        self.pdf_button.grid(row=0, column=2, sticky="e", padx=(6, 0))
 
     def _build_menu(self):
         menu = tk.Menu(self.root)
@@ -654,6 +659,222 @@ class BeamDesigner:
             messagebox.showerror(
                 "Export failed", f"Could not export the beam results.\n\n{error}"
             )
+
+    def export_pdf(self):
+        if self.analysis is None:
+            return
+        path = filedialog.asksaveasfilename(
+            parent=self.root,
+            title="Export calculation sheet",
+            initialfile="beam_calculation_sheet.pdf",
+            defaultextension=".pdf",
+            filetypes=(("PDF files", "*.pdf"), ("All files", "*")),
+        )
+        if not path:
+            return
+
+        try:
+            report = Figure(figsize=(8.5, 11), dpi=150, facecolor="white")
+            report.text(
+                0.08,
+                0.965,
+                "Beam Designer — Calculation Sheet",
+                fontsize=16,
+                fontweight="bold",
+                color="#25344c",
+                va="top",
+            )
+            report.text(
+                0.08,
+                0.938,
+                "Structural analysis report",
+                fontsize=9,
+                color="#738198",
+                va="top",
+            )
+            support_label = "Simply supported" if self.support == "simply_supported" else "Cantilever"
+            report.text(
+                0.08,
+                0.900,
+                f"Inputs    Support: {support_label}    Span: {self.span:g} ft    "
+                f"Material: {self.material}    Section: {self.section}    "
+                f"Deflection limit: L/{self.deflection_divisor}",
+                fontsize=8.5,
+                color="#25344c",
+                va="top",
+            )
+            load_text = "Loads: " + ("None" if not self.loads else "; ".join(self._format_load(load) for load in self.loads))
+            report.text(
+                0.08,
+                0.866,
+                load_text,
+                fontsize=8,
+                color="#4f6078",
+                va="top",
+                wrap=True,
+            )
+            reaction_text = (
+                f"Reactions: Rₗ {self.analysis.reaction_left:.2f} k, "
+                f"Rᵣ {self.analysis.reaction_right:.2f} k"
+                if self.support == "simply_supported"
+                else f"Reaction: {self.analysis.reaction_left:.2f} k    "
+                f"Fixed-end moment: {self.analysis.fixed_end_moment:.2f} kip-ft"
+            )
+            report.text(0.08, 0.837, reaction_text, fontsize=8, color="#4f6078", va="top")
+
+            beam_axis = report.add_axes([0.12, 0.700, 0.80, 0.105])
+            self._draw_report_beam(beam_axis)
+            self._draw_report_diagram(
+                report.add_axes([0.12, 0.515, 0.80, 0.135]),
+                self.analysis.shear,
+                "Shear",
+                "kips",
+                ACCENT,
+                self.analysis.max_shear,
+            )
+            self._draw_report_diagram(
+                report.add_axes([0.12, 0.335, 0.80, 0.135]),
+                self.analysis.moment,
+                "Moment",
+                "kip-ft",
+                TEAL,
+                self.analysis.max_moment,
+            )
+            self._draw_report_diagram(
+                report.add_axes([0.12, 0.155, 0.80, 0.135]),
+                self.analysis.deflection,
+                "Deflection",
+                "in",
+                PURPLE,
+                self.analysis.max_deflection,
+                invert=True,
+                x_label=True,
+            )
+
+            report.text(0.12, 0.112, "Design checks", fontsize=10, fontweight="bold", color="#25344c")
+            bending_pass = self.analysis.bending_ratio <= 1.0
+            deflection_pass = self.analysis.deflection_ratio <= 1.0
+            report.text(
+                0.12,
+                0.082,
+                f"Bending: {self.analysis.bending_stress:.2f} ksi / "
+                f"{self.analysis.allowable_bending:.2f} ksi allowable    "
+                f"{'PASS' if bending_pass else 'FAIL'}",
+                fontsize=8.5,
+                color="#287747" if bending_pass else "#a62c34",
+                fontweight="bold",
+            )
+            report.text(
+                0.12,
+                0.058,
+                f"Deflection: {abs(self.analysis.deflection[self.analysis.max_deflection]):.3f} in / "
+                f"{self.analysis.deflection_limit:.3f} in allowable    "
+                f"{'PASS' if deflection_pass else 'FAIL'}",
+                fontsize=8.5,
+                color="#287747" if deflection_pass else "#a62c34",
+                fontweight="bold",
+            )
+            if self.analysis.recommendation:
+                report.text(
+                    0.58,
+                    0.082,
+                    f"Lightest passing section: {self.analysis.recommendation}",
+                    fontsize=8,
+                    color="#4f6078",
+                )
+            report.text(0.08, 0.025, "Generated by Beam Designer", fontsize=7, color="#9aa7b8")
+
+            with PdfPages(path) as pdf:
+                pdf.infodict()["Title"] = "Beam Designer Calculation Sheet"
+                pdf.infodict()["Subject"] = "Beam design inputs, diagrams, and checks"
+                pdf.savefig(report, facecolor="white")
+        except (OSError, ValueError) as error:
+            messagebox.showerror(
+                "PDF export failed", f"Could not export the calculation sheet.\n\n{error}"
+            )
+
+    @staticmethod
+    def _format_load(load):
+        if load.kind == "point":
+            return f"Point {load.magnitude:g} k @ {load.position:g} ft"
+        return f"Uniform {load.magnitude:g} k/ft from {load.start:g} to {load.end:g} ft"
+
+    def _draw_report_beam(self, axis):
+        axis.set_xlim(0, self.span)
+        axis.set_ylim(0, 1)
+        axis.axis("off")
+        y = 0.48
+        axis.plot([0, self.span], [y, y], color="#25344c", lw=4, solid_capstyle="round")
+        if self.support == "simply_supported":
+            for x in (0, self.span):
+                width = max(self.span * 0.018, 0.18)
+                axis.fill(
+                    [x - width, x, x + width],
+                    [0.22, 0.42, 0.22],
+                    facecolor="#dbe4f3",
+                    edgecolor="#71819c",
+                    lw=0.7,
+                )
+                axis.plot([x - width * 1.6, x + width * 1.6], [0.20, 0.20], color="#71819c", lw=0.7)
+        else:
+            axis.plot([0, 0], [0.20, 0.78], color="#71819c", lw=3)
+        for load in self.loads:
+            if load.kind == "point":
+                x = min(self.span, max(0.0, load.position))
+                axis.annotate(
+                    "",
+                    xy=(x, y + 0.02),
+                    xytext=(x, 0.87),
+                    arrowprops={"arrowstyle": "-|>", "color": ACCENT, "lw": 1.2},
+                )
+                axis.text(x, 0.90, f"{load.magnitude:g} k", ha="center", va="bottom", fontsize=7, color=ACCENT)
+            elif load.end > load.start:
+                a, b = max(0.0, load.start), min(self.span, load.end)
+                axis.plot([a, b], [0.80, 0.80], color=TEAL, lw=1.2)
+                count = max(2, int((b - a) / max(self.span / 14, 0.1)) + 1)
+                for x in np.linspace(a, b, count):
+                    axis.annotate(
+                        "",
+                        xy=(x, y + 0.02),
+                        xytext=(x, 0.79),
+                        arrowprops={"arrowstyle": "-|>", "color": TEAL, "lw": 0.7},
+                    )
+                axis.text((a + b) / 2, 0.83, f"{load.magnitude:g} k/ft", ha="center", va="bottom", fontsize=7, color=TEAL)
+        axis.text(0, 0.02, "0 ft", ha="left", va="bottom", fontsize=6.5, color="#738198")
+        axis.text(self.span, 0.02, f"{self.span:g} ft", ha="right", va="bottom", fontsize=6.5, color="#738198")
+        axis.text(0, 1.02, "Beam and applied loads", ha="left", va="bottom", fontsize=8, fontweight="bold", color="#4f6078")
+
+    def _draw_report_diagram(self, axis, values, title, unit, color, data_index, invert=False, x_label=False):
+        x = self.analysis.x
+        axis.set_facecolor("#f2f7fc")
+        axis.axhline(0, color="#cfd7e3", lw=0.7)
+        axis.fill_between(x, values, 0, color=color, alpha=0.14)
+        axis.plot(x, values, color=color, lw=1.4)
+        axis.scatter([x[data_index]], [values[data_index]], color=color, s=12, zorder=3)
+        axis.annotate(
+            f"{values[data_index]:.3f} {unit}" if unit == "in" else f"{values[data_index]:.2f} {unit}",
+            (x[data_index], values[data_index]),
+            xytext=(4, 5 if values[data_index] >= 0 else -12),
+            textcoords="offset points",
+            fontsize=7,
+            color=color,
+            fontweight="bold",
+        )
+        extent = max(npmax_abs(values), 1e-6)
+        axis.set_ylim(-extent * 1.28, extent * 1.28)
+        if invert:
+            axis.set_ylim(extent * 1.28, -extent * 1.28)
+        axis.set_xlim(0, self.span)
+        axis.set_ylabel(f"{title}\n({unit})", rotation=0, ha="right", va="center", fontsize=7, color="#738198")
+        axis.yaxis.set_label_coords(-0.025, 0.5)
+        axis.tick_params(axis="both", labelsize=6.5, colors="#738198", length=2)
+        axis.grid(axis="x", color="#dce4ef", lw=0.4)
+        if not x_label:
+            axis.tick_params(axis="x", labelbottom=False)
+        else:
+            axis.set_xlabel("Position along beam (ft)", fontsize=7, color="#738198")
+        for edge in axis.spines.values():
+            edge.set_visible(False)
 
     def _draw_bar(self, canvas, ratio, color):
         canvas.delete("all")
