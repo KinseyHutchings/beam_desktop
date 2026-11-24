@@ -30,6 +30,9 @@
 - Asked: Rerun the validation cases in `spec.md` and confirm they still pass.
 - Changed: Reran cases 1–4 and all boundary behaviors directly through `calculations.py`; no application code changed.
 - Worked: Yes. All numeric values remain within 1% of the spec; case 3 correctly reports the expected deflection FAIL, and every boundary case passes.
+- Asked: Write a short `README.md` describing what the app does, which packages to install, and how to start it.
+- Changed: Added `README.md` with the app overview, NumPy/Matplotlib installation command, and `python3 app.py` launch command.
+- Worked: Yes. The README was added as requested.
 - Asked: Add a Calculation sheet button that saves the diagrams and checks as a PDF, with inputs listed at the top for hand-in.
 - Changed: Added an Export PDF button and one-page report generator with design inputs, loads, reactions, beam/load drawing, shear/moment/deflection diagrams, checks, and recommendation; documented it in `spec.md`.
 - Worked: Python compilation and a generated PDF smoke test passed.
