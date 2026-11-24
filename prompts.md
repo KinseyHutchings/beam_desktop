@@ -36,3 +36,6 @@
 - Asked: Add a Calculation sheet button that saves the diagrams and checks as a PDF, with inputs listed at the top for hand-in.
 - Changed: Added an Export PDF button and one-page report generator with design inputs, loads, reactions, beam/load drawing, shear/moment/deflection diagrams, checks, and recommendation; documented it in `spec.md`.
 - Worked: Python compilation and a generated PDF smoke test passed.
+- Asked: What's the global username and email set for git?
+- Changed: Checked Git's global `user.name` and `user.email`; no application files changed.
+- Worked: Yes. The configured identity is Madison Hutchings (maddiehutch20@gmail.com).
