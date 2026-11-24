@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import csv
 import json
 import math
 import sys
@@ -157,8 +158,15 @@ class BeamDesigner:
         self.right.grid(row=1, column=1, sticky="nsew")
         self.right.rowconfigure(1, weight=1)
         self.right.columnconfigure(0, weight=1)
-        self.right_meta = ttk.Label(self.right, style="Meta.TLabel")
-        self.right_meta.grid(row=0, column=0, sticky="ew", pady=(2, 7))
+        self.right_header = ttk.Frame(self.right)
+        self.right_header.grid(row=0, column=0, sticky="ew", pady=(2, 7))
+        self.right_header.columnconfigure(0, weight=1)
+        self.right_meta = ttk.Label(self.right_header, style="Meta.TLabel")
+        self.right_meta.grid(row=0, column=0, sticky="w")
+        self.export_button = ttk.Button(
+            self.right_header, text="Export CSV", command=self.export_results
+        )
+        self.export_button.grid(row=0, column=1, sticky="e", padx=(10, 0))
 
     def _build_menu(self):
         menu = tk.Menu(self.root)
@@ -610,6 +618,42 @@ class BeamDesigner:
         self._rebuild_load_rows()
         self.current_file = path
         self.render()
+
+    def export_results(self):
+        if self.analysis is None:
+            return
+        path = filedialog.asksaveasfilename(
+            parent=self.root,
+            title="Export beam results",
+            initialfile="beam_results.csv",
+            defaultextension=".csv",
+            filetypes=(("CSV files", "*.csv"), ("All files", "*")),
+        )
+        if not path:
+            return
+        try:
+            with open(path, "w", encoding="utf-8-sig", newline="") as results_file:
+                writer = csv.writer(results_file)
+                writer.writerow(
+                    [
+                        "Position (ft)",
+                        "Shear (kips)",
+                        "Moment (kip-ft)",
+                        "Deflection (in)",
+                    ]
+                )
+                writer.writerows(
+                    zip(
+                        self.analysis.x.tolist(),
+                        self.analysis.shear.tolist(),
+                        self.analysis.moment.tolist(),
+                        self.analysis.deflection.tolist(),
+                    )
+                )
+        except (OSError, csv.Error) as error:
+            messagebox.showerror(
+                "Export failed", f"Could not export the beam results.\n\n{error}"
+            )
 
     def _draw_bar(self, canvas, ratio, color):
         canvas.delete("all")

@@ -76,6 +76,8 @@ sizing a floor beam or deck joist.
 ## Outputs
 - A File menu with Save and Open. Save the support type, span, material and section,
   deflection limit, and all loads to a design file; Open restores those values.
+- An Export CSV button that saves a table of position x, shear V, moment M, and
+  deflection y along the beam in a CSV format that opens in Excel.
 - A beam drawing with the supports, load arrows (point loads as single
   arrows, uniform loads as a row of small arrows), and the reactions.
 - Three diagrams stacked under the beam and lined up with it on the same

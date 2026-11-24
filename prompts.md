@@ -21,3 +21,6 @@
 - Asked: Verify why the app would not allow saving a file and fix it if needed.
 - Changed: Replaced the macOS dialog's multi-dot `*.beam.json` filter with portable `*.json` handling, added a default filename, and attached Save/Open dialogs to the main window.
 - Worked: Python compilation and a first-save dialog/file-write smoke test passed; the native dialog no longer receives the problematic multi-dot file type.
+- Asked: Add an Export results button that saves x, V, M, and deflection along the beam to a CSV file for Excel.
+- Changed: Added an Export CSV button and UTF-8 CSV writer with unit-labeled Position, Shear, Moment, and Deflection columns; documented the output in `spec.md`.
+- Worked: Python compilation and a headless CSV export smoke test passed.
